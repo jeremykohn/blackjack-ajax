@@ -1,0 +1,95 @@
+<div>
+  <hr>
+  <h1>Blackjack!</h1>
+  <hr>
+</div>
+
+<div class='well'>
+  <h3>
+    <%= "Dealer's cards:" %>
+    <% if session[:turn] == 'player' %>
+	  <%= "Score = (Unknown)" %>
+	<% else %>	
+	  <%= "Score = #{calculate_total(session[:dealer_cards])}" %>
+	<% end %>
+  </h3>
+  <% session[:dealer_cards].each_with_index do |dealer_card, i| %>
+    <% if session[:turn] == 'player' && i == 0 %>
+      <%= "<img src='/images/cards/cover.jpg'>" %>
+      <%= "&nbsp;" %>
+    <% else %>
+      <%= display_card(dealer_card) %>
+      <%= "&nbsp;" %>
+    <% end %>
+  <% end %>
+</div>
+
+<div class='well'>
+  <h3><%= "#{session[:player_name]}'s cards: Score = #{calculate_total(session[:player_cards])}" %></h3>
+  <% session[:player_cards].each do |player_card| %>
+    <%= display_card(player_card) %>
+    <%= "&nbsp;" %>
+  <% end %>
+</div>
+
+<div>
+  <% if @error %>
+    <div class="alert alert-error"><%=@error%></div>
+  <% elsif @success %>
+    <div class="alert alert-success"><%=@success%></div>
+  <% else %>
+    <div class="alert alert-info"><%= "#{session[:turn].capitalize}'s turn." %></div>
+  <% end %>
+</div>
+
+<div>
+  <% if session[:betting_person] == true %>
+    <div class="alert alert-info">
+      <% if session[:turn] == 'player' %>
+        <%= "You have $#{session[:wager]} riding on the outcome of this game." %>
+      <% elsif session[:turn] == 'dealer' %>
+        <%= "If you win you'll have $#{session[:player_money] + session[:wager]}... but if you lose you'll have $#{session[:player_money] - session[:wager]}." %>
+      <% elsif session[:turn] == 'end' %>
+        <% if session[:winner] == 'player' %>
+          <%= "Congratulations! You won $#{session[:wager]} and now you have $#{session[:player_money]}." %>
+      <% elsif session[:winner] == 'dealer' %>
+        <%= "Too bad! You lost $#{session[:wager]} and now you have $#{session[:player_money]}." %>
+      <% elsif session[:winner] == 'tie' %>
+        <%= "You neither won nor lost. You still have $#{session[:player_money]}. "%>
+      <% end %>
+    <% end %>
+    </div>
+  <% end %>
+</div>
+
+<div>
+  <% if session[:turn] != 'player'%>
+    <%= "Dealer has #{calculate_total(session[:dealer_cards])}." %>
+  <% end %>
+  <%= "You have #{calculate_total(session[:player_cards])}." %>
+</div>
+
+<div>
+  <% if session[:turn] == 'player' %>
+    <p><%= "What would you like to do, #{session[:player_name]}?" %></p>
+    <form action="/game/player/hit" method='post'>
+      <input type="submit" class="btn-large" value="Hit" />
+    </form>
+    <form action="/game/player/stay" method='post'>
+      <input type="submit" class="btn-large" value="Stay" />
+    </form>
+  <% elsif session[:turn] == 'dealer' %>
+    <p><%= "Click to see dealer's next move." %></p>
+    <form action="/game/dealer/next" method='post'>
+      <h3><input type="submit" class="btn-large" value="Next ->" /></h3>
+    </form>
+  <% elsif session[:turn] == 'end' %>
+    <p><%= "Would you like to play again?" %></p>
+    <form action="/game/play_again_yes" method='get'>
+      <input type="submit" class="btn-large" value="Yes" />
+    </form>
+    <form action="/game/play_again_no" method='get'>
+      <input type="submit" class="btn-large" value="No" />
+    </form>
+<% end %>
+</div>

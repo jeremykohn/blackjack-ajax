@@ -1,0 +1,13 @@
+<h2>
+<%= "You have $#{session[:player_money]}. How much would you like to bet?" %>
+</h2>
+
+<form action="/bet_amount" method="post">
+  <input type="text" name="wager"/>
+  <br/>
+  <input type="submit" class="btn btn-large" value="Submit"/>
+</form>
+
+<% if @bet_error %>
+  <div class="alert alert-info"><h3><%= @bet_error %></h3></div>
+<% end %>

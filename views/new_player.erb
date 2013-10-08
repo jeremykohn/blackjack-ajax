@@ -1,0 +1,11 @@
+<h2>Please enter your name.</h2>
+
+<form action="/new_player" method="post">
+  <input type="text" name="player_name"/>
+  <br/>
+  <input type="submit" class="btn btn-large" value="Submit"/>
+</form>
+
+<% if session[:no_name] %>
+  <div class="alert alert-info"><h3>Please enter your name and click "Submit."</h3></div>
+<% end %>
