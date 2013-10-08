@@ -59,6 +59,7 @@ helpers do
         dealer_wins
       end
     end
+    # Otherwise, neither side won yet and nothing happens.
   end
 
   def display_card(card)
@@ -98,6 +99,8 @@ get '/new_player' do
   # Clear the player's name & betting-person status
   session[:player_name] = false
   session[:betting_person] = false
+  session[:player_money] = 0
+  session[:wager] = 0
   erb :new_player
 end
 
@@ -210,22 +213,26 @@ post '/game/player/stay' do
 end
 
 post '/game/dealer/next' do
+
   # Current scores.
   player_score = calculate_total(session[:player_cards])  
   dealer_score = calculate_total(session[:dealer_cards])
 
-  # Dealer will hit or stay based on current score.
+  # Dealer wins, loses, or will hit or stay based on current score.
 
-  if dealer_score < 17 # Dealer hits.
-    session[:dealer_cards] << session[:deck].pop
-  elsif dealer_score == 17 # Dealer hits only if it's a "soft" hand.
-    if sessions[:soft_hand]
+  if dealer_score == 17
+    if session[:soft_hand] # Dealer hits only if it's a "soft" hand.
       session[:dealer_cards] << session[:deck].pop
+      dealer_score = calculate_total(session[:dealer_cards])
     end
-  else # Dealer stays. End of game. Compare scores.
-    who_won(dealer_score, player_score)
+  elsif dealer_score < 17 # Dealer hits.
+    session[:dealer_cards] << session[:deck].pop
+    dealer_score = calculate_total(session[:dealer_cards])
   end
 
+  who_won(dealer_score, player_score) 
+  # If neither side won yet, player can click "next" again.
+    
   erb :game
 end
 
