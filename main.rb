@@ -5,6 +5,22 @@ set :sessions, true
 
 helpers do
   
+  def player_new_card
+    session[:player_cards] << session[:deck].pop
+  end
+  
+  def player_update_score
+    session[:player_score] = calculate_total(session[:player_cards])
+  end
+
+  def dealer_new_card
+    session[:dealer_cards] << session[:deck].pop
+  end
+  
+  def dealer_update_score
+    session[:dealer_score] = calculate_total(session[:dealer_cards]) 
+  end
+  
   def calculate_total(cards)
     values = cards.map{|element| element[1]}
     total = 0
@@ -21,45 +37,79 @@ helpers do
       end
     end
     
-    session[:soft_hand] = false
-    # Change to "true" if there's an ace worth 11.  
-    # A "soft" hand is one that includes an ace worth 11.
-    # Dealer stays if a hard 17, hits if a soft 17.   
-    
-    # Add aces to score. Keep track of hard vs. soft hands.
+    # Add aces to score. 
+    # Also keep track of hard vs. soft hands. Soft hand means there's an ace worth 11.
+
+    session[:soft_ace] = false # Unless there's still an ace worth 11.
+
     number_of_aces.times do
       if total + 11 > 21
         total += 1
       else
         total += 11
-        session[:soft_hand] = true
+        session[:soft_ace] = true
       end
     end    
 
     total
   end
   
-  def who_won(dealer_score, player_score)
-    if dealer_score > 21 # Dealer busts.
+  def player_hit
+    player_new_card
+    player_update_score
+  end    
+  
+  def dealer_hit
+    dealer_new_card
+    dealer_update_score
+  end
+  
+  def who_won
+
+    player_update_score
+    dealer_update_score
+    
+    player_score = session[:player_score]
+    dealer_score = session[:dealer_score]
+
+    if player_score > 21
+      @error = "Bust! Dealer wins since you have more than 21."
+      dealer_wins
+    elsif player_score == 21
+      @success = "Blackjack! You won with 21 points."
+      player_wins
+    elsif dealer_score > 21
       @success = "Dealer busted. You win!"
       player_wins
-    elsif dealer_score == 21 # Blackjack for dealer.
+    elsif dealer_score == 21
       @error = "You lose! Dealer wins with 21 points."
       dealer_wins
-    elsif dealer_score >= 17
-      # Compare scores.
-      if player_score > dealer_score
-        @success = "You win! You beat the dealer's score."
-        player_wins
-      elsif player_score == dealer_score
-        @success = "Tie game. Both players have the same score."
-        tie_game
-      else
-        @error = "You lose! Dealer wins by beating your score."
-        dealer_wins
+    elsif dealer_score > 17
+      compare_scores
+    elsif dealer_score == 17
+      if session[:soft_ace] == false # A hard 17 means dealer stays.
+        compare_scores
       end
+    else
+    # Nobody won yet. Play continues.
     end
-    # Otherwise, neither side won yet and nothing happens.
+  end
+
+  def compare_scores
+    
+    player_score = session[:player_score]
+    dealer_score = session[:dealer_score]
+
+    if player_score > dealer_score
+      @success = "You win! You beat the dealer's score."
+      player_wins
+    elsif player_score < dealer_score
+      @error = "You lose! Dealer wins by beating your score."
+      dealer_wins      
+    elsif player_score == dealer_score
+      @success = "Tie game. Both players have the same score."
+      tie_game
+    end
   end
 
   def display_card(card)
@@ -96,11 +146,13 @@ get '/' do
 end
 
 get '/new_player' do
-  # Clear the player's name & betting-person status
+  # Clear the session variables.
   session[:player_name] = false
   session[:betting_person] = false
   session[:player_money] = 0
   session[:wager] = 0
+  session[:soft_ace] = false
+  
   erb :new_player
 end
 
@@ -170,12 +222,16 @@ get '/game' do
 
   # Deal cards.
   session[:dealer_cards] = []
+  dealer_new_card
+  dealer_new_card  
+
   session[:player_cards] = []
-  session[:dealer_cards] << session[:deck].pop
-  session[:player_cards] << session[:deck].pop
-  session[:dealer_cards] << session[:deck].pop
-  session[:player_cards] << session[:deck].pop
-  
+  player_new_card
+  player_new_card
+
+  dealer_update_score
+  player_update_score
+
   # Player's turn begins.
   session[:turn] = 'player'
   
@@ -189,51 +245,38 @@ get '/game' do
 end
 
 post '/game/player/hit' do
-  session[:player_cards] << session[:deck].pop
-  
-  player_score = calculate_total(session[:player_cards])
 
-  # See if player either has blackjack now or busted.
-  if player_score > 21
-    @error = "Bust! Dealer wins since you have more than 21."
-    dealer_wins
-  elsif player_score == 21
-    @success = "Blackjack! You won with 21 points."
-    player_wins
-  end
-  # Otherwise, player has less than 21 and can either hit again or stay.
+  player_hit
+  who_won
   
-  erb :game
+  # If neither won yet, player can either hit again or stay.
+  
+  erb :game, layout: false
 end
 
 post '/game/player/stay' do
   # Switch from player's to dealer's turn.
   session[:turn] = 'dealer'
-  erb :game
+  erb :game, layout: false
 end
 
 post '/game/dealer/next' do
 
-  # Current scores.
-  player_score = calculate_total(session[:player_cards])  
-  dealer_score = calculate_total(session[:dealer_cards])
+  dealer_update_score
 
-  # Dealer wins, loses, or will hit or stay based on current score.
-
-  if dealer_score == 17
-    if session[:soft_hand] # Dealer hits only if it's a "soft" hand.
-      session[:dealer_cards] << session[:deck].pop
-      dealer_score = calculate_total(session[:dealer_cards])
+  who_won
+  
+  if session[:dealer_score] < 17 # Dealer hits.
+    dealer_hit
+  elsif session[:dealer_score] == 17 # Dealer hits only if it's a hand with a "soft" ace.
+    if session[:soft_ace] 
+      dealer_hit
     end
-  elsif dealer_score < 17 # Dealer hits.
-    session[:dealer_cards] << session[:deck].pop
-    dealer_score = calculate_total(session[:dealer_cards])
   end
+  
+  # If nobody won yet, "Next" button is still visible and play continues.
 
-  who_won(dealer_score, player_score) 
-  # If neither side won yet, player can click "next" again.
-    
-  erb :game
+  erb :game, layout: false
 end
 
 get '/game/play_again_yes' do

@@ -1,3 +1,5 @@
+<div id="game">
+
 <div>
   <hr>
   <h1>Blackjack!</h1>
@@ -52,12 +54,12 @@
       <% elsif session[:turn] == 'end' %>
         <% if session[:winner] == 'player' %>
           <%= "Congratulations! You won $#{session[:wager]} and now you have $#{session[:player_money]}." %>
-      <% elsif session[:winner] == 'dealer' %>
-        <%= "Too bad! You lost $#{session[:wager]} and now you have $#{session[:player_money]}." %>
-      <% elsif session[:winner] == 'tie' %>
-        <%= "You neither won nor lost. You still have $#{session[:player_money]}. "%>
+        <% elsif session[:winner] == 'dealer' %>
+          <%= "Too bad! You lost $#{session[:wager]} and now you have $#{session[:player_money]}." %>
+        <% elsif session[:winner] == 'tie' %>
+          <%= "You neither won nor lost. You still have $#{session[:player_money]}. "%>
+        <% end %>
       <% end %>
-    <% end %>
     </div>
   <% end %>
 </div>
@@ -71,25 +73,27 @@
 
 <div>
   <% if session[:turn] == 'player' %>
-    <p><%= "What would you like to do, #{session[:player_name]}?" %></p>
-    <form action="/game/player/hit" method='post'>
+    <p><%= "What would you like to do, #{session[:player_name]}?" %></p>		
+    <form id="player_hit" action="/game/player/hit" method='post'>
       <input type="submit" class="btn-large" value="Hit" />
     </form>
-    <form action="/game/player/stay" method='post'>
+    <form id="player_stay" action="/game/player/stay" method='post'>
       <input type="submit" class="btn-large" value="Stay" />
     </form>
   <% elsif session[:turn] == 'dealer' %>
     <p><%= "Click to see dealer's next move." %></p>
-    <form action="/game/dealer/next" method='post'>
+    <form id="dealer_next" action="/game/dealer/next" method='post'>
       <h3><input type="submit" class="btn-large" value="Next ->" /></h3>
     </form>
   <% elsif session[:turn] == 'end' %>
     <p><%= "Would you like to play again?" %></p>
-    <form action="/game/play_again_yes" method='get'>
+    <form id="play_again_yes" action="/game/play_again_yes" method='get'>
       <input type="submit" class="btn-large" value="Yes" />
     </form>
-    <form action="/game/play_again_no" method='get'>
+    <form id="play_again_no" action="/game/play_again_no" method='get'>
       <input type="submit" class="btn-large" value="No" />
     </form>
 <% end %>
+</div>
+
 </div>
