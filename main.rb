@@ -9,16 +9,16 @@ helpers do
     session[:player_cards] << session[:deck].pop
   end
   
+  def dealer_new_card
+    session[:dealer_cards] << session[:deck].pop
+  end
+    
   def player_update_score
     session[:player_score] = calculate_total(session[:player_cards])
   end
 
-  def dealer_new_card
-    session[:dealer_cards] << session[:deck].pop
-  end
-  
   def dealer_update_score
-    session[:dealer_score] = calculate_total(session[:dealer_cards]) 
+    session[:dealer_score] = calculate_total(session[:dealer_cards])
   end
   
   def calculate_total(cards)
@@ -49,36 +49,28 @@ helpers do
         total += 11
         session[:soft_ace] = true
       end
-    end    
+    end
 
     total
   end
   
-  def player_hit
-    player_new_card
-    player_update_score
-  end    
-  
-  def dealer_hit
-    dealer_new_card
-    dealer_update_score
-  end
-  
-  def who_won
-
-    player_update_score
-    dealer_update_score
+  def did_player_win_or_bust
+    player_score = player_update_score
     
-    player_score = session[:player_score]
-    dealer_score = session[:dealer_score]
-
     if player_score > 21
       @error = "Bust! Dealer wins since you have more than 21."
       dealer_wins
     elsif player_score == 21
       @success = "Blackjack! You won with 21 points."
       player_wins
-    elsif dealer_score > 21
+    end
+  end
+  
+  def who_won
+    player_score = player_update_score  
+    dealer_score = dealer_update_score
+    
+    if dealer_score > 21
       @success = "Dealer busted. You win!"
       player_wins
     elsif dealer_score == 21
@@ -96,7 +88,6 @@ helpers do
   end
 
   def compare_scores
-    
     player_score = session[:player_score]
     dealer_score = session[:dealer_score]
 
@@ -246,34 +237,34 @@ end
 
 post '/game/player/hit' do
 
-  player_hit
-  who_won
+  player_new_card
   
-  # If neither won yet, player can either hit again or stay.
+  did_player_win_or_bust
   
   erb :game, layout: false
 end
 
 post '/game/player/stay' do
-  # Switch from player's to dealer's turn.
   session[:turn] = 'dealer'
+  who_won
+  # Otherwise, witch from player's to dealer's turn.
   erb :game, layout: false
 end
 
 post '/game/dealer/next' do
 
-  dealer_update_score
-
-  who_won
+  dealer_score = dealer_update_score
   
-  if session[:dealer_score] < 17 # Dealer hits.
-    dealer_hit
-  elsif session[:dealer_score] == 17 # Dealer hits only if it's a hand with a "soft" ace.
+  if dealer_score < 17 # Dealer hits.
+    dealer_new_card
+  elsif dealr_score == 17 # Dealer hits only if it's a hand with a "soft" ace.
     if session[:soft_ace] 
-      dealer_hit
+      dealer_new_card
     end
   end
   
+  # Check if the dealer's new hand ends the game.
+  who_won
   # If nobody won yet, "Next" button is still visible and play continues.
 
   erb :game, layout: false
